@@ -636,7 +636,7 @@ require('lazy').setup({
       local cmp = require 'cmp'
       local luasnip = require 'luasnip'
       local lua_loader = require 'luasnip.loaders.from_lua'
-      luasnip.config.setup {}
+      luasnip.config.setup { enable_autosnippets = true }
       -- Lazy-load snippets, i.e. only load when required, e.g. for a given filetype
       lua_loader.lazy_load { paths = { '~/.config/nvim/lua/custom/LuaSnip/' } }
 
@@ -697,8 +697,8 @@ require('lazy').setup({
           --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
         },
         sources = {
-          { name = 'nvim_lsp' },
           { name = 'luasnip' },
+          { name = 'nvim_lsp' },
           { name = 'path' },
           { name = 'buffer' },
           { name = 'fish' },
