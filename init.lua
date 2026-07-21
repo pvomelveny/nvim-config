@@ -109,6 +109,13 @@ local swapdir = vim.fn.expand '~/.local/nvim/tmp'
 vim.fn.mkdir(swapdir, 'p')
 vim.opt.directory = swapdir .. '//'
 
+-- Auto-reload files changed on disk outside Neovim -- e.g. edited by an agent
+-- in another tmux pane. Works together with `set -g focus-events on` in tmux
+-- and the checktime autocommand below. Also show the file name in the
+-- tmux/terminal title.
+vim.o.autoread = true
+vim.o.title = true
+
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
 
@@ -165,14 +172,10 @@ vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
 vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
 vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
 
--- Keybinds to make split navigation easier.
---  Use CTRL+<hjkl> to switch between windows
---
+-- Split/pane navigation with CTRL+<hjkl> is provided by vim-tmux-navigator
+-- (lua/custom/plugins/tmux-navigator.lua), so the same keys move between Neovim
+-- splits AND adjacent tmux panes. Outside tmux they just move between windows.
 --  See `:help wincmd` for a list of all window commands
-vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
-vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
-vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
-vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
 
 -- NOTE: Some terminals have colliding keymaps or are not able to send distinct keycodes
 -- vim.keymap.set("n", "<C-S-h>", "<C-w>H", { desc = "Move window to the left" })
@@ -191,6 +194,18 @@ vim.api.nvim_create_autocmd('TextYankPost', {
   group = vim.api.nvim_create_augroup('kickstart-highlight-yank', { clear = true }),
   callback = function()
     vim.hl.on_yank()
+  end,
+})
+
+-- Reload buffers changed on disk when Neovim regains focus or you switch
+-- buffers, so edits made in another tmux pane (or by an agent) are picked up.
+vim.api.nvim_create_autocmd({ 'FocusGained', 'BufEnter', 'CursorHold', 'TermClose', 'TermLeave' }, {
+  desc = 'Check for external file changes',
+  group = vim.api.nvim_create_augroup('kickstart-checktime', { clear = true }),
+  callback = function()
+    if vim.fn.mode() ~= 'c' then
+      vim.cmd 'checktime'
+    end
   end,
 })
 
