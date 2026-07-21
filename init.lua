@@ -128,6 +128,26 @@ vim.api.nvim_create_autocmd('FileType', {
   end,
 })
 
+-- Soft-wrap prose filetypes at word boundaries, and reveal LaTeX/markdown
+-- conceal (VimTeX renders \alpha etc. once conceallevel >= 2).
+vim.api.nvim_create_autocmd('FileType', {
+  desc = 'Prose-friendly settings for writing filetypes',
+  group = vim.api.nvim_create_augroup('kickstart-prose', { clear = true }),
+  pattern = { 'markdown', 'tex', 'plaintex', 'typst', 'text', 'gitcommit' },
+  callback = function()
+    vim.opt_local.wrap = true
+    vim.opt_local.linebreak = true
+    vim.opt_local.conceallevel = 2
+  end,
+})
+
+-- Toggle expanded, full-width diagnostics under the current line. Off by
+-- default (the compact inline virtual_text stays); press <leader>tv for detail.
+vim.keymap.set('n', '<leader>tv', function()
+  local enabled = vim.diagnostic.config().virtual_lines
+  vim.diagnostic.config { virtual_lines = not enabled and { current_line = true } or false }
+end, { desc = '[T]oggle [V]irtual-line diagnostics' })
+
 -- Diagnostic keymaps
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
 
@@ -302,6 +322,9 @@ require('lazy').setup({
         { '<leader>s', group = '[S]earch' },
         { '<leader>t', group = '[T]oggle' },
         { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } },
+        { '<leader>x', group = 'Trouble/Diagnostics' },
+        { '<leader>g', group = '[G]it' },
+        { '<leader>Q', group = 'Session' },
       },
     },
   },
@@ -672,6 +695,11 @@ require('lazy').setup({
             -- exportPdf = 'onSave', -- uncomment to auto-write a PDF on every save
           },
         },
+        -- Harper: a lightweight, local grammar/spell checker (a Rust binary, so
+        -- no Java runtime unlike ltex). Attaches to prose and code comments.
+        harper_ls = {
+          filetypes = { 'markdown', 'tex', 'typst', 'gitcommit', 'text' },
+        },
       }
 
       -- Ensure the servers and tools above are installed
@@ -927,6 +955,10 @@ require('lazy').setup({
     'nvim-treesitter/nvim-treesitter',
     build = ':TSUpdate',
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
+    -- Pin to master: this config uses classic nvim-treesitter (master), whose
+    -- module system (opts.textobjects below) needs the matching textobjects
+    -- branch. The default `main` branch is the incompatible rewrite.
+    dependencies = { { 'nvim-treesitter/nvim-treesitter-textobjects', branch = 'master' } },
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
       ensure_installed = {
@@ -981,6 +1013,29 @@ require('lazy').setup({
         additional_vim_regex_highlighting = { 'latex', 'markdown', 'ruby' },
       },
       indent = { enable = true, disable = { 'ruby' } },
+      -- Treesitter-aware text objects (needs nvim-treesitter-textobjects).
+      -- select: af/if = a/inner function, ac/ic = class, aa/ia = argument.
+      -- move: ]f/[f jump between functions, ]c/[c between classes.
+      textobjects = {
+        select = {
+          enable = true,
+          lookahead = true, -- jump forward to the textobject if not already on one
+          keymaps = {
+            ['af'] = '@function.outer',
+            ['if'] = '@function.inner',
+            ['ac'] = '@class.outer',
+            ['ic'] = '@class.inner',
+            ['aa'] = '@parameter.outer',
+            ['ia'] = '@parameter.inner',
+          },
+        },
+        move = {
+          enable = true,
+          set_jumps = true, -- record moves in the jumplist
+          goto_next_start = { [']f'] = '@function.outer', [']c'] = '@class.outer' },
+          goto_previous_start = { ['[f'] = '@function.outer', ['[c'] = '@class.outer' },
+        },
+      },
     },
     -- There are additional nvim-treesitter modules that you can use to interact
     -- with nvim-treesitter. You should go explore a few and see what interests you:
@@ -999,7 +1054,7 @@ require('lazy').setup({
   --  Here are some example plugins that I've included in the Kickstart repository.
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
-  -- require 'kickstart.plugins.debug',
+  require 'kickstart.plugins.debug',
   require 'kickstart.plugins.indent_line',
   require 'kickstart.plugins.lint',
   -- require 'kickstart.plugins.autopairs',
