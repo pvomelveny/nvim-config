@@ -23,7 +23,6 @@
 
 -- Set <space> as the leader key
 -- See `:help mapleader`
---  NOTE  thing
 --  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
@@ -104,8 +103,11 @@ vim.opt.scrolloff = 10
 -- See `:help 'confirm'`
 vim.o.confirm = true
 
--- Change swap file location
-vim.opt.directory = '$HOME/.local/nvim/tmp//'
+-- Change swap file location. Create the directory if it is missing, otherwise
+-- Neovim silently fails to write swap files there (breaking crash recovery).
+local swapdir = vim.fn.expand '~/.local/nvim/tmp'
+vim.fn.mkdir(swapdir, 'p')
+vim.opt.directory = swapdir .. '//'
 
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
@@ -114,9 +116,17 @@ vim.opt.directory = '$HOME/.local/nvim/tmp//'
 --  See `:help hlsearch`
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
--- Enable spell checking
+-- Enable spell checking only for prose filetypes (not code buffers, where it
+-- would flag identifiers as misspelled).
 vim.opt.spelllang = 'en_us'
-vim.opt.spell = true
+vim.api.nvim_create_autocmd('FileType', {
+  desc = 'Enable spell checking for prose filetypes',
+  group = vim.api.nvim_create_augroup('kickstart-spell', { clear = true }),
+  pattern = { 'markdown', 'tex', 'plaintex', 'text', 'gitcommit' },
+  callback = function()
+    vim.opt_local.spell = true
+  end,
+})
 
 -- Diagnostic keymaps
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
@@ -762,7 +772,15 @@ require('lazy').setup({
           --   end,
           -- },
         },
-        opts = {},
+        config = function()
+          local luasnip = require 'luasnip'
+          -- Required for the `snippetType = 'autosnippet'` snippets in
+          -- lua/custom/LuaSnip/ to expand automatically as you type.
+          luasnip.setup { enable_autosnippets = true }
+          -- Load your custom Lua snippets. Files are keyed by filetype:
+          -- `all.lua` loads everywhere, `tex/*.lua` load for tex, etc.
+          require('luasnip.loaders.from_lua').load { paths = vim.fn.stdpath 'config' .. '/lua/custom/LuaSnip' }
+        end,
       },
       'folke/lazydev.nvim',
     },
@@ -928,12 +946,12 @@ require('lazy').setup({
         'lua',
         'luadoc',
         'markdown',
-        'markdown_inline', 
+        'markdown_inline',
         'ninja',
         'nix',
         'purescript',
         'python',
-        'query', 
+        'query',
         'ruby',
         'rust',
         'sql',

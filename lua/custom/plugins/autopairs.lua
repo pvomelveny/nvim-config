@@ -1,14 +1,14 @@
 -- File: lua/custom/plugins/autopairs.lua
+-- Automatically close brackets, quotes, etc.
+--
+-- NOTE: This config uses blink.cmp (not nvim-cmp) for completion, and blink
+-- handles inserting function-call parens on its own. So nvim-autopairs only
+-- needs its standalone setup here -- no completion-engine integration.
 
 return {
   'windwp/nvim-autopairs',
-  -- Optional dependency
-  dependencies = { 'hrsh7th/nvim-cmp' },
+  event = 'InsertEnter',
   config = function()
     require('nvim-autopairs').setup {}
-    -- If you want to automatically add `(` after selecting a function or method
-    local cmp_autopairs = require 'nvim-autopairs.completion.cmp'
-    local cmp = require 'cmp'
-    cmp.event:on('confirm_done', cmp_autopairs.on_confirm_done())
   end,
 }
