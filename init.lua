@@ -664,6 +664,14 @@ require('lazy').setup({
           --   },
           -- },
         },
+        -- Typst language server. Bundles the `typstyle` formatter; formatterMode
+        -- enables it so format-on-save (conform's lsp_format fallback) works.
+        tinymist = {
+          settings = {
+            formatterMode = 'typstyle',
+            -- exportPdf = 'onSave', -- uncomment to auto-write a PDF on every save
+          },
+        },
       }
 
       -- Ensure the servers and tools above are installed
@@ -958,6 +966,7 @@ require('lazy').setup({
         'tmux',
         'toml',
         'typescript',
+        'typst',
         'vim',
         'vimdoc',
       },
