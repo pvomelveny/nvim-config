@@ -4,6 +4,7 @@
 
 return {
   'nvim-treesitter/nvim-treesitter-context',
+  branch = 'master', -- match the classic nvim-treesitter stack (see init.lua)
   event = { 'BufReadPre', 'BufNewFile' },
   opts = { max_lines = 3 },
   keys = {
