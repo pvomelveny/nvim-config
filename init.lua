@@ -209,6 +209,22 @@ vim.api.nvim_create_autocmd({ 'FocusGained', 'BufEnter', 'CursorHold', 'TermClos
   end,
 })
 
+-- Record which session was most recently focused, so tools outside Neovim can
+-- reuse it. The wanshi [edit] link handler reads this to open a note in the
+-- session you were actually using; without it, it can only guess at the most
+-- recently *started* one, since a socket carries no usage timestamp.
+vim.api.nvim_create_autocmd({ 'FocusGained', 'BufEnter' }, {
+  desc = 'Record this session as the most recently used',
+  group = vim.api.nvim_create_augroup('last-used-server', { clear = true }),
+  callback = function()
+    -- Only sessions with a UI: a headless one-shot is not somewhere you can
+    -- return to, and would otherwise clobber the record of a real session.
+    if vim.v.servername ~= '' and #vim.api.nvim_list_uis() > 0 then
+      vim.fn.writefile({ vim.v.servername }, vim.fn.stdpath 'cache' .. '/last-server')
+    end
+  end,
+})
+
 -- [[ Install `lazy.nvim` plugin manager ]]
 --    See `:help lazy.nvim.txt` or https://github.com/folke/lazy.nvim for more info
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
