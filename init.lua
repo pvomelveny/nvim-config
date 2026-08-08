@@ -213,14 +213,30 @@ vim.api.nvim_create_autocmd({ 'FocusGained', 'BufEnter', 'CursorHold', 'TermClos
 -- reuse it. The wanshi [edit] link handler reads this to open a note in the
 -- session you were actually using; without it, it can only guess at the most
 -- recently *started* one, since a socket carries no usage timestamp.
+local last_server_file = vim.fn.stdpath 'cache' .. '/last-server'
+local last_server_group = vim.api.nvim_create_augroup('last-used-server', { clear = true })
 vim.api.nvim_create_autocmd({ 'FocusGained', 'BufEnter' }, {
   desc = 'Record this session as the most recently used',
-  group = vim.api.nvim_create_augroup('last-used-server', { clear = true }),
+  group = last_server_group,
   callback = function()
     -- Only sessions with a UI: a headless one-shot is not somewhere you can
     -- return to, and would otherwise clobber the record of a real session.
     if vim.v.servername ~= '' and #vim.api.nvim_list_uis() > 0 then
-      vim.fn.writefile({ vim.v.servername }, vim.fn.stdpath 'cache' .. '/last-server')
+      vim.fn.writefile({ vim.v.servername }, last_server_file)
+    end
+  end,
+})
+
+-- Drop the record on exit, so a reader isn't handed a socket that no longer
+-- answers. Only when it still names *this* session: another session may have
+-- claimed it since, and that one is still alive. A crash or a SIGKILL skips
+-- this, so readers must treat a failed connect as "no session" regardless.
+vim.api.nvim_create_autocmd('VimLeavePre', {
+  desc = 'Clear the most-recently-used record if it points at this session',
+  group = last_server_group,
+  callback = function()
+    if vim.v.servername ~= '' and vim.fn.filereadable(last_server_file) == 1 and vim.fn.readfile(last_server_file)[1] == vim.v.servername then
+      vim.fn.delete(last_server_file)
     end
   end,
 })
