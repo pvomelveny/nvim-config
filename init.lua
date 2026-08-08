@@ -129,7 +129,7 @@ vim.opt.spelllang = 'en_us'
 vim.api.nvim_create_autocmd('FileType', {
   desc = 'Enable spell checking for prose filetypes',
   group = vim.api.nvim_create_augroup('kickstart-spell', { clear = true }),
-  pattern = { 'markdown', 'tex', 'plaintex', 'text', 'gitcommit' },
+  pattern = { 'markdown', 'tex', 'plaintex', 'typst', 'text', 'gitcommit' },
   callback = function()
     vim.opt_local.spell = true
   end,
