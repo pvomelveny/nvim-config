@@ -908,6 +908,21 @@ require('lazy').setup({
           -- Load your custom Lua snippets. Files are keyed by filetype:
           -- `all.lua` loads everywhere, `tex/*.lua` load for tex, etc.
           require('luasnip.loaders.from_lua').load { paths = vim.fn.stdpath 'config' .. '/lua/custom/LuaSnip' }
+
+          -- Cycle a choice node's options, e.g. the `from:`/`sort:`/`order:`
+          -- fields of the wanshi `query` snippet. LuaSnip binds nothing for this
+          -- by default, so without it you get the first option and no way to
+          -- reach the rest.
+          --
+          -- Insert and select mode only: `<C-l>` stays with vim-tmux-navigator
+          -- in normal mode (lua/custom/plugins/tmux-navigator.lua), whose `keys`
+          -- spec is normal-mode only. `change_choice` wraps, so one direction
+          -- reaches every option.
+          vim.keymap.set({ 'i', 's' }, '<C-l>', function()
+            if luasnip.choice_active() then
+              luasnip.change_choice(1)
+            end
+          end, { desc = 'LuaSnip: next choice' })
         end,
       },
       'folke/lazydev.nvim',
