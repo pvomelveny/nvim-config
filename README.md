@@ -6,6 +6,15 @@
 > has been taken, and the deferred work (notably the nvim-treesitter
 > `master` → `main` migration, whose current branch is frozen upstream).
 
+> [!NOTE]
+> **[WANSHI.md](WANSHI.md)** documents this fork's editing support for
+> [wanshi](https://github.com/pvomelveny/wanshi) note forests — link
+> navigation, slug completion, snippets, and why tinymist needs a custom Typst
+> root. It is scoped to directories holding a `Wanshi.toml`, so it is inert
+> everywhere else.
+
+Everything below is upstream kickstart's own README.
+
 ## Introduction
 
 A starting point for Neovim that is:
