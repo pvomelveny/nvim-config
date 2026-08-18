@@ -1,5 +1,11 @@
 # kickstart.nvim
 
+> [!NOTE]
+> This is a personal fork. Upstream has diverged past merging, so its changes
+> are ported by hand — see [UPSTREAM.md](UPSTREAM.md) for the sync state, what
+> has been taken, and the deferred work (notably the nvim-treesitter
+> `master` → `main` migration, whose current branch is frozen upstream).
+
 ## Introduction
 
 A starting point for Neovim that is:
