@@ -765,11 +765,7 @@ require('lazy').setup({
           -- what put the root at the host repository for an embedded forest.
           root_dir = function(bufnr, on_dir)
             local fname = vim.api.nvim_buf_get_name(bufnr)
-            on_dir(
-              require('wanshi').root_for(fname)
-                or vim.fs.root(fname, { 'typst.toml', '.git' })
-                or vim.fs.dirname(fname)
-            )
+            on_dir(require('wanshi').root_for(fname) or vim.fs.root(fname, { 'typst.toml', '.git' }) or vim.fs.dirname(fname))
           end,
           settings = {
             formatterMode = 'typstyle',

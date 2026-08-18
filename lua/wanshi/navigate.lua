@@ -84,10 +84,7 @@ function M.follow()
     -- warning, not an error — so offer to create the note rather than refuse.
     local root = wanshi.root_for()
     local intended = root and vim.fs.joinpath(root, slug .. '.typ')
-    vim.notify(
-      ('wanshi: `%s` resolves to `%s`, which does not exist yet'):format(target, slug),
-      vim.log.levels.WARN
-    )
+    vim.notify(('wanshi: `%s` resolves to `%s`, which does not exist yet'):format(target, slug), vim.log.levels.WARN)
     if intended and vim.fn.confirm('Create ' .. slug .. '.typ?', '&Yes\n&No', 2) == 1 then
       vim.fn.mkdir(vim.fs.dirname(intended), 'p')
       vim.cmd.edit(vim.fn.fnameescape(intended))

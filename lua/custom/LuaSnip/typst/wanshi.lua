@@ -86,14 +86,7 @@ table.insert(
 ---
 --- Note also that a directory index is linked by its slug, not its URL:
 --- `/notes/index`, even though the page is served at `/notes/`.
-table.insert(
-  snippets,
-  s(
-    { trig = 'ln', desc = 'wanshi: link another note' },
-    fmta([[#local("/<>")<>]], { i(1, 'slug'), i(0) }),
-    { condition = in_wanshi }
-  )
-)
+table.insert(snippets, s({ trig = 'ln', desc = 'wanshi: link another note' }, fmta([[#local("/<>")<>]], { i(1, 'slug'), i(0) }), { condition = in_wanshi }))
 
 table.insert(
   snippets,
@@ -108,11 +101,7 @@ table.insert(
 --- alone does not compile.
 table.insert(
   snippets,
-  s(
-    { trig = 'embed', desc = 'wanshi: embed another note' },
-    fmta([[#embed("/<>", "<>")<>]], { i(1, 'slug'), i(2, 'Title'), i(0) }),
-    { condition = in_wanshi }
-  )
+  s({ trig = 'embed', desc = 'wanshi: embed another note' }, fmta([[#embed("/<>", "<>")<>]], { i(1, 'slug'), i(2, 'Title'), i(0) }), { condition = in_wanshi })
 )
 
 --- Subtree helpers. Each is sugar for `subtree` with a preset taxon, and each
@@ -147,30 +136,13 @@ end
 
 --- Anonymous by default: a proof belongs to the statement above it and rarely
 --- needs its own URL.
-table.insert(
-  snippets,
-  s({ trig = 'prf', desc = 'wanshi: proof (anonymous)' }, fmta('#proof[\n  <>\n]', { i(0) }), { condition = in_wanshi })
-)
+table.insert(snippets, s({ trig = 'prf', desc = 'wanshi: proof (anonymous)' }, fmta('#proof[\n  <>\n]', { i(0) }), { condition = in_wanshi }))
 
 --- Listings. These are resolved at build time against the whole forest, so a
 --- hub written with one never needs editing when a note is added.
-table.insert(
-  snippets,
-  s(
-    { trig = 'children', desc = 'wanshi: list this page\'s children' },
-    fmta('#children(<>)', { i(0) }),
-    { condition = in_wanshi }
-  )
-)
+table.insert(snippets, s({ trig = 'children', desc = "wanshi: list this page's children" }, fmta('#children(<>)', { i(0) }), { condition = in_wanshi }))
 
-table.insert(
-  snippets,
-  s(
-    { trig = 'recent', desc = 'wanshi: list recent notes' },
-    fmta('#recent(count: <>)', { i(1, '10') }),
-    { condition = in_wanshi }
-  )
-)
+table.insert(snippets, s({ trig = 'recent', desc = 'wanshi: list recent notes' }, fmta('#recent(count: <>)', { i(1, '10') }), { condition = in_wanshi }))
 
 table.insert(
   snippets,
@@ -210,11 +182,7 @@ table.insert(
 --- `fletcher`/`cetz` diagram does not make it through.
 table.insert(
   snippets,
-  s(
-    { trig = 'fig', desc = 'wanshi: figure that survives HTML export' },
-    fmta('#auto-figure(auto-frame(\n  <>\n))', { i(0) }),
-    { condition = in_wanshi }
-  )
+  s({ trig = 'fig', desc = 'wanshi: figure that survives HTML export' }, fmta('#auto-figure(auto-frame(\n  <>\n))', { i(0) }), { condition = in_wanshi })
 )
 
 --- A named subtree repeated as its own heading is common enough to warrant the
