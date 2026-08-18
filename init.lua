@@ -241,6 +241,17 @@ vim.api.nvim_create_autocmd('VimLeavePre', {
   end,
 })
 
+-- [[ wanshi note forests ]]
+-- Buffer-local navigation for Typst notes in a directory holding `Wanshi.toml`:
+-- `gf` follows a #local/#embed link, and <leader>n{b,l,f} picks over backlinks,
+-- outbound links, and all notes. Everything is scoped to a detected forest, so
+-- ordinary Typst files keep the stock behaviour. See lua/wanshi/.
+--
+-- Cheap at startup: this only registers a FileType autocmd, and the module
+-- pulls in nothing but `wanshi` itself. Telescope is required lazily, inside
+-- the pickers, so it is not dragged in before lazy.nvim has even run.
+require('wanshi.navigate').setup()
+
 -- [[ Install `lazy.nvim` plugin manager ]]
 --    See `:help lazy.nvim.txt` or https://github.com/folke/lazy.nvim for more info
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
@@ -372,6 +383,9 @@ require('lazy').setup({
         { '<leader>x', group = 'Trouble/Diagnostics' },
         { '<leader>g', group = '[G]it' },
         { '<leader>Q', group = 'Session' },
+        -- Only mapped in wanshi note buffers (see lua/wanshi/navigate.lua), so
+        -- the group is listed but its keys appear only where they work.
+        { '<leader>n', group = '[N]otes (wanshi)' },
       },
     },
   },
@@ -737,6 +751,26 @@ require('lazy').setup({
         -- Typst language server. Bundles the `typstyle` formatter; formatterMode
         -- enables it so format-on-save (conform's lsp_format fallback) works.
         tinymist = {
+          -- In a wanshi forest, the Typst root is `<project>/trees`, not the
+          -- workspace root. Notes open with a root-absolute
+          -- `#import "/_lib/wanshi.typ": *`, which resolves against Typst's
+          -- root — so with the workspace root tinymist searches
+          -- `<repo>/_lib/wanshi.typ`, finds nothing, and marks line 1 of every
+          -- note as an error. See `lua/wanshi/init.lua`.
+          -- `vim.lsp.config` signature: fun(bufnr, on_dir). The root is only
+          -- adopted if `on_dir` is called, so calling it unconditionally is
+          -- what keeps tinymist attaching to plain Typst files too.
+          --
+          -- Overrides lspconfig's shipped `root_markers = { '.git' }`, which is
+          -- what put the root at the host repository for an embedded forest.
+          root_dir = function(bufnr, on_dir)
+            local fname = vim.api.nvim_buf_get_name(bufnr)
+            on_dir(
+              require('wanshi').root_for(fname)
+                or vim.fs.root(fname, { 'typst.toml', '.git' })
+                or vim.fs.dirname(fname)
+            )
+          end,
           settings = {
             formatterMode = 'typstyle',
             -- exportPdf = 'onSave', -- uncomment to auto-write a PDF on every save
@@ -771,17 +805,31 @@ require('lazy').setup({
       require('mason-lspconfig').setup {
         ensure_installed = {}, -- explicitly set to an empty table (Kickstart populates installs via mason-tool-installer)
         automatic_installation = false,
-        handlers = {
-          function(server_name)
-            local server = servers[server_name] or {}
-            -- This handles overriding only values explicitly passed
-            -- by the server configuration above. Useful when disabling
-            -- certain features of an LSP (for example, turning off formatting for ts_ls)
-            server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
-            require('lspconfig')[server_name].setup(server)
-          end,
-        },
+        -- Defaults to true in mason-lspconfig v2, which would `vim.lsp.enable`
+        -- every server Mason has installed — including ones deliberately absent
+        -- from `servers` below, and without the blink.cmp `capabilities` the
+        -- loop underneath attaches. Enabling is done explicitly there instead.
+        automatic_enable = false,
       }
+
+      -- Apply the `servers` overrides above.
+      --
+      -- This used to go through mason-lspconfig's `handlers` table, calling
+      -- `require('lspconfig')[name].setup(...)`. mason-lspconfig v2 removed
+      -- `handlers`, so that block had silently stopped doing anything: every
+      -- server started with its stock lspconfig defaults and nothing in
+      -- `servers` was applied. It failed quietly — the servers still attached,
+      -- just unconfigured — so the only symptom was settings mysteriously not
+      -- taking effect (`lua_ls`'s callSnippet, `tinymist`'s formatterMode).
+      --
+      -- `vim.lsp.config()` merges onto the defaults that nvim-lspconfig now
+      -- ships as `lsp/<name>.lua`, and `vim.lsp.enable()` starts them on the
+      -- right filetypes. This is the supported path on Nvim 0.11+.
+      for name, server in pairs(servers) do
+        server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
+        vim.lsp.config(name, server)
+        vim.lsp.enable(name)
+      end
     end,
   },
 
@@ -911,9 +959,17 @@ require('lazy').setup({
       },
 
       sources = {
-        default = { 'lsp', 'path', 'snippets', 'lazydev' },
+        default = { 'lsp', 'path', 'snippets', 'lazydev', 'wanshi' },
         providers = {
           lazydev = { module = 'lazydev.integrations.blink', score_offset = 100 },
+          -- Completes note slugs inside `#local("…")` / `#embed("…")` in a
+          -- wanshi forest, read from the generated wanshi.json. The source's
+          -- own `enabled()` keeps it inert everywhere else, so it costs
+          -- nothing in other filetypes.
+          --
+          -- Outranks the LSP because inside a slug string tinymist has nothing
+          -- useful to offer, and its generic suggestions would bury the notes.
+          wanshi = { name = 'wanshi', module = 'wanshi.complete', score_offset = 100 },
         },
       },
 
