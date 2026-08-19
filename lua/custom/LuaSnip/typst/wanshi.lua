@@ -121,6 +121,13 @@ local subtrees = {
   { trig = 'conj', helper = 'conjecture', label = 'conjecture' },
   { trig = 'obs', helper = 'observation', label = 'observation' },
   { trig = 'exeg', helper = 'exegesis', label = 'exegesis' },
+  -- Added in wanshi 0.4.0. Same signature as the rest, so the loop below covers
+  -- them unchanged.
+  { trig = 'ax', helper = 'axiom', label = 'axiom' },
+  { trig = 'clm', helper = 'claim', label = 'claim' },
+  { trig = 'fct', helper = 'fact', label = 'fact' },
+  { trig = 'hyp', helper = 'hypothesis', label = 'hypothesis' },
+  { trig = 'post', helper = 'postulate', label = 'postulate' },
 }
 
 for _, sub in ipairs(subtrees) do

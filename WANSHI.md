@@ -16,14 +16,46 @@ Everything below is scoped to a detected forest. Outside one, `gf` and
 | | |
 | --- | --- |
 | `gf` | follow the `#local`/`#embed` link under the cursor |
-| `<leader>nb` | backlinks — what links *here* |
+| `<leader>nb` | backlinks **and** Found in — everything that points here |
 | `<leader>nl` | links — what this note points at |
 | `<leader>nf` | find any note in the forest |
 
 Plus slug completion inside `#local("…")` / `#embed("…")` showing each note's
-title and taxon, and ~23 snippets: `note`, `meta`, the subtree helpers (`def`,
-`thm`, `lem`, `prf`, …), `ln`/`lnt`/`embed`, and the listings (`children`,
-`recent`, `bytaxon`, `orphans`, `query`).
+title and taxon, and 28 snippets: `note`, `meta`, all sixteen subtree helpers
+(`def`, `thm`, `lem`, `prf`, `ax`, `clm`, `fct`, `hyp`, `post`, …),
+`ln`/`lnt`/`embed`, and the listings (`children`, `recent`, `bytaxon`,
+`orphans`, `query`).
+
+## Two kinds of backlink
+
+wanshi records two reverse edges and keeps them apart deliberately, because
+citing a note and containing one are different relationships:
+
+| Edge | Reverse of | Shown on the page as |
+| --- | --- | --- |
+| `backlinks` | `#local()` | Backlinks |
+| `embedded_by` | `#embed()` | Found in |
+
+`embedded_by` exists because an embed's other trace is fragile. Embedding also
+makes the host the *parent* of the embedded note — but `parent` holds a single
+slug, and one the note declares for itself replaces the embedder entirely. Since
+declaring a parent is the recommended fix for a note embedded in several places,
+following that advice used to erase every record of the embedding. `embedded_by`
+records every host, and only direct ones: if A embeds B and B embeds C, C records
+B, not A.
+
+`<leader>nb` answers both at once — while writing, the question is "what points
+at this?", and needing two keys for half an answer each is the wrong shape. A
+note in both lists appears **once**, tagged:
+
+```
+Backlinks & Found in — guide/chain-middle
+
+  link        guide/chain-inner    Chain, inner
+  link+embed  guide/embeds         Embedding notes   (guide)
+```
+
+The tag is searchable, so typing `embed` narrows to one kind.
 
 ## Layout
 
@@ -83,6 +115,14 @@ signatures — the snippets scaffold structure, but discovery is the LSP's job.
   `npm run notes:watch` — or `wanshi serve --indexes` — running while writing.
   Note that plain `wanshi serve` defaults indexes **off** and will delete the
   index a build wrote.
+
+- **A named subtree has no file of its own.** `#definition(slug: "…")` and
+  friends are sections written *inside* another note, so they appear in
+  `wanshi.json` and the graph while `path_in` finds nothing for them — 5 of the
+  21 sections in wanshi's own demo forest are like this. The pickers follow
+  `embedded_by` (then `parent`) to the nearest section that does have a file and
+  open that, showing `in <host>` on the row. The walk is transitive, since a
+  subtree can be written inside a subtree.
 
 - **Slugs are not filenames.** A directory index is linked by slug
   (`#local("/boolean/index")`) even though it is *served* at `/boolean/`. And a

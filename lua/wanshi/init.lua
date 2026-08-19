@@ -199,6 +199,56 @@ function M.path_in(root, slug)
   return nil
 end
 
+--- The file to open for a slug, and the section that file actually is.
+---
+--- A *named subtree* — `#definition(slug: "…")` and friends — is a section
+--- without a file of its own: it is written inside another note. So it appears
+--- in `wanshi.json` and in the graph, `path_in` finds nothing for it, and a
+--- picker entry pointing at one used to be a dead end.
+---
+--- `embedded_by` is the record that fixes this. It holds every section that
+--- embeds this one, and a named subtree is an embed, so it names the note the
+--- subtree was written in. `parent` is the fallback for the rare section with
+--- no embedder, and is deliberately second: it holds a single slug that a
+--- self-declared `parent` displaces, which is the very fragility `embedded_by`
+--- was added to avoid.
+---
+--- Walks rather than taking one hop, since a subtree can be written inside a
+--- subtree (`guide/monoid-strings` sits in `guide/monoid`, which sits in
+--- `guide/subtrees`). `seen` guards a graph that points at itself.
+---@param slug string
+---@param root string as returned by `root_for`
+---@param graph table as returned by `graph`
+---@return string? path, string? host_slug host_slug is nil when the slug has its own file
+function M.source_for(slug, root, graph)
+  local own = M.path_in(root, slug)
+  if own then
+    return own, nil
+  end
+
+  local seen, current = { [slug] = true }, slug
+  while true do
+    local section = graph[current]
+    if not section then
+      return nil, nil
+    end
+    -- Sorted so a section with several hosts resolves to the same one every
+    -- time; `embedded_by` is a set on wanshi's side and arrives unordered.
+    local hosts = vim.deepcopy(section.embedded_by or {})
+    table.sort(hosts)
+    local next_slug = hosts[1] or section.parent
+    if not next_slug or seen[next_slug] then
+      return nil, nil
+    end
+    seen[next_slug] = true
+    local path = M.path_in(root, next_slug)
+    if path then
+      return path, next_slug
+    end
+    current = next_slug
+  end
+end
+
 --- The file backing a slug, if it exists.
 ---@param slug string
 ---@param path string? any file in the forest, to locate it

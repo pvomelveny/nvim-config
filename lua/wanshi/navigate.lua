@@ -96,25 +96,39 @@ function M.follow()
 end
 
 --- Rows for a telescope picker: slug plus title, for a list of slugs.
+---
+--- `kinds` labels *why* each slug is listed, and is only passed by `backlinks`,
+--- where a note can be here for two different reasons. The other pickers pass
+--- nothing and render exactly as before.
 ---@param slugs string[]
----@return { slug: string, title: string, taxon: string?, path: string? }[]
-local function decorate(slugs)
+---@param kinds table<string, string>? slug -> tag, e.g. 'link+embed'
+---@return { slug: string, title: string, taxon: string?, path: string?, kind: string?, host: string? }[]
+local function decorate(slugs, kinds)
   local by_slug = {}
   for _, note in ipairs(wanshi.notes()) do
     by_slug[note.slug] = note
   end
-  -- Resolve the root once and use `path_in`. `path_of` re-derives it per slug,
+  -- Resolve the root and the graph once. `path_of` re-derives the root per slug,
   -- which is an upward directory walk and a `Wanshi.toml` read each time — fine
   -- for a single lookup, but this runs over every entry in the picker.
   local root = wanshi.root_for()
+  local graph = wanshi.graph()
   local out = {}
   for _, slug in ipairs(slugs) do
     local note = by_slug[slug] or {}
+    -- `source_for`, not `path_in`: a named subtree has no file of its own, and
+    -- opening the note that contains it is what the reader actually wants.
+    local path, host
+    if root then
+      path, host = wanshi.source_for(slug, root, graph)
+    end
     table.insert(out, {
       slug = slug,
       title = note.title or slug,
       taxon = note.taxon,
-      path = root and wanshi.path_in(root, slug) or nil,
+      path = path,
+      host = host,
+      kind = kinds and kinds[slug] or nil,
     })
   end
   table.sort(out, function(a, b)
@@ -148,12 +162,23 @@ local function pick(entries, title)
           if entry.taxon then
             display = display .. '  (' .. entry.taxon .. ')'
           end
+          -- Only the backlinks picker sets `kind`; elsewhere the row is
+          -- unchanged, so no empty column appears in `nl` and `nf`.
+          if entry.kind then
+            display = ('%-11s %s'):format(entry.kind, display)
+          end
+          -- Selecting this row opens a different file than the slug names, so
+          -- say which one rather than jumping somewhere unannounced.
+          if entry.host then
+            display = display .. '  in ' .. entry.host
+          end
           return {
             value = entry,
             display = display,
-            -- Both slug and title are searchable; the slug is a path and the
-            -- title is what you actually remember.
-            ordinal = entry.slug .. ' ' .. entry.title,
+            -- Slug, title, tag and host are all searchable: the slug is a path,
+            -- the title is what you actually remember, and typing `embed`
+            -- narrows to one kind of relationship.
+            ordinal = table.concat({ entry.kind or '', entry.slug, entry.title, entry.host or '' }, ' '),
             path = entry.path,
           }
         end,
@@ -177,11 +202,22 @@ local function pick(entries, title)
     :find()
 end
 
---- Notes that link to this one.
+--- Everything that points at this note, of either kind.
 ---
---- Backlinks are derived by wanshi, not written by hand — every `#local` you
---- write produces one on its target. This is the view that makes them visible
---- while writing rather than only in the browser.
+--- wanshi records two reverse edges, and keeps them apart on purpose: citing a
+--- note and containing one are different relationships.
+---
+---   * `backlinks`   — the reverse of `#local`. A cites B, so B lists A.
+---   * `embedded_by` — the reverse of `#embed`, shown as "Found in" on the
+---     published page. A contains B, so B lists A.
+---
+--- Both are derived, never written by hand, and both are answered here: the
+--- question while writing is "what points at this?", and having to press two
+--- keys to get half an answer each time would be the wrong shape.
+---
+--- A note can be in both lists — linking something you also embed is ordinary —
+--- so they are merged by slug and tagged rather than concatenated. One row per
+--- note, because the row is a file you are about to open.
 function M.backlinks()
   local slug = wanshi.slug_of()
   if not slug then
@@ -193,7 +229,26 @@ function M.backlinks()
     vim.notify('wanshi: `' .. slug .. '` is not in the graph — build the forest first', vim.log.levels.WARN)
     return
   end
-  pick(decorate(section.backlinks or {}), 'Backlinks to ' .. slug)
+
+  local seen, slugs = {}, {}
+  local function add(list, key)
+    for _, other in ipairs(list or {}) do
+      if not seen[other] then
+        seen[other] = {}
+        table.insert(slugs, other)
+      end
+      seen[other][key] = true
+    end
+  end
+  add(section.backlinks, 'link')
+  add(section.embedded_by, 'embed')
+
+  local kinds = {}
+  for other, found in pairs(seen) do
+    kinds[other] = found.link and (found.embed and 'link+embed' or 'link') or 'embed'
+  end
+
+  pick(decorate(slugs, kinds), 'Backlinks & Found in — ' .. slug)
 end
 
 --- Notes this one links to.
